@@ -3,10 +3,14 @@ import { atomFamily } from "jotai/utils";
 import { getEvents } from "@/services/polymarket";
 import type { EventModel } from "@/types/event";
 
+export const EVENT_CATEGORIES = ["all", "crypto", "sports", "politics"] as const;
+export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+
 export const eventsAtom = atom<EventModel[]>([]);
 export const isLoadingEventsAtom = atom<boolean>(true);
 export const eventsErrorAtom = atom<string | null>(null);
 export const eventPricesAtom = atom<Record<string, number>>({});
+export const selectedCategoryAtom = atom<EventCategory>("all");
 
 const toInitialPrice = (event: EventModel): number => {
   const fromMarket = event.markets[0]?.outcomes[0]?.price;
@@ -20,6 +24,26 @@ const toInitialPrice = (event: EventModel): number => {
 const clampPrice = (value: number): number => {
   return Math.min(0.99, Math.max(0.01, value));
 };
+
+const normalize = (value: string | null | undefined): string => (value ?? "").toLowerCase();
+
+const matchesCategory = (event: EventModel, category: EventCategory): boolean => {
+  if (category === "all") {
+    return true;
+  }
+
+  if (normalize(event.category).includes(category)) {
+    return true;
+  }
+
+  return event.tags.some((tag) => normalize(tag.label).includes(category));
+};
+
+export const filteredEventsAtom = atom((get) => {
+  const events = get(eventsAtom);
+  const selectedCategory = get(selectedCategoryAtom);
+  return events.filter((event) => matchesCategory(event, selectedCategory));
+});
 
 export const eventPriceAtomFamily = atomFamily((eventId: string) =>
   atom((get) => get(eventPricesAtom)[eventId] ?? null),

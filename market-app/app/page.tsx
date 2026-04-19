@@ -2,20 +2,25 @@
 
 import { useEffect } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
+import { CategoryNav } from "@/components/CategoryNav";
 import { EventCard } from "@/components/EventCard";
 import {
-  eventsAtom,
+  EVENT_CATEGORIES,
+  filteredEventsAtom,
   eventsErrorAtom,
   isLoadingEventsAtom,
   loadEventsAtom,
+  selectedCategoryAtom,
   tickEventPricesAtom,
 } from "@/store/index";
 
 export default function Home() {
-  const events = useAtomValue(eventsAtom);
+  const events = useAtomValue(filteredEventsAtom);
   const isLoading = useAtomValue(isLoadingEventsAtom);
   const errorMessage = useAtomValue(eventsErrorAtom);
+  const selectedCategory = useAtomValue(selectedCategoryAtom);
   const loadEvents = useSetAtom(loadEventsAtom);
+  const setSelectedCategory = useSetAtom(selectedCategoryAtom);
   const tickEventPrices = useSetAtom(tickEventPricesAtom);
 
   useEffect(() => {
@@ -44,6 +49,11 @@ export default function Home() {
     <div className="min-h-screen bg-[#020617] p-6">
       <div className="mx-auto max-w-5xl">
         <h1 className="mb-6 text-2xl font-semibold text-slate-100">Trending Events</h1>
+        <CategoryNav
+          categories={EVENT_CATEGORIES}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+        />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
             <EventCard
