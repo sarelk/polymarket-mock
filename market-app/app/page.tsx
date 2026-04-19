@@ -1,40 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getEvents } from "@/services/polymarket";
-import type { EventModel } from "@/types/event";
+import { useEffect } from "react";
+import { useAtomValue, useSetAtom } from "jotai";
+import { EventCard } from "@/components/EventCard";
+import { eventsAtom, eventsErrorAtom, isLoadingEventsAtom, loadEventsAtom } from "@/store/index";
 
 export default function Home() {
-  const [events, setEvents] = useState<EventModel[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const events = useAtomValue(eventsAtom);
+  const isLoading = useAtomValue(isLoadingEventsAtom);
+  const errorMessage = useAtomValue(eventsErrorAtom);
+  const loadEvents = useSetAtom(loadEventsAtom);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadEvents = async () => {
-      try {
-        const data = await getEvents({ limit: 20, active: true });
-        if (isMounted) {
-          setEvents(data);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setErrorMessage(error instanceof Error ? error.message : "Failed to load events");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
     loadEvents();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  }, [loadEvents]);
 
   if (isLoading) {
     return <div className="p-6">Loading events...</div>;
@@ -45,13 +24,15 @@ export default function Home() {
   }
 
   return (
-    <div className="p-6 space-y-3">
-      {events.map((event) => (
-        <div key={event.id} className="rounded border border-gray-200 p-3">
-          <h2 className="font-semibold">{event.title}</h2>
-          {event.description ? <p className="text-sm text-gray-600">{event.description}</p> : null}
+    <div className="min-h-screen bg-[#020617] p-6">
+      <div className="mx-auto max-w-5xl">
+        <h1 className="mb-6 text-2xl font-semibold text-slate-100">Trending Events</h1>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {events.map((event) => (
+            <EventCard key={event.id} title={event.title} volume={event.volume} />
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
