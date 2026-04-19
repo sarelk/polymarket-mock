@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { eventPriceAtomFamily } from "@/store/index";
 
@@ -124,6 +125,14 @@ function EventCardComponent({
             ({impliedProbability})
           </span>
         </div>
+      </div>
+      <div className="mt-4">
+        <Link
+          href={`/event/${eventId}`}
+          className="inline-flex items-center rounded-lg border border-slate-700 px-3 py-1.5 text-sm font-medium text-slate-200 transition-colors hover:border-slate-500 hover:text-white"
+        >
+          View details
+        </Link>
       </div>
     </article>
   );

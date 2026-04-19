@@ -48,6 +48,9 @@ export const filteredEventsAtom = atom((get) => {
 export const eventPriceAtomFamily = atomFamily((eventId: string) =>
   atom((get) => get(eventPricesAtom)[eventId] ?? null),
 );
+export const eventByIdAtomFamily = atomFamily((eventId: string) =>
+  atom((get) => get(eventsAtom).find((event) => event.id === eventId) ?? null),
+);
 
 export const loadEventsAtom = atom(null, async (_get, set) => {
   set(isLoadingEventsAtom, true);
