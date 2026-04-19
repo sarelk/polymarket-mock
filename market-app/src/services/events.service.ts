@@ -145,11 +145,21 @@ export async function fetchEvents(options: FetchEventsOptions = {}): Promise<Eve
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch Polymarket events: ${response.status} ${response.statusText}`);
+    console.error("API ERROR:", response.status, response.statusText);
+    return [];
   }
 
-  const data: unknown = await response.json();
+  let data: unknown;
+
+  try {
+    data = await response.json();
+  } catch (err) {
+    console.error("JSON PARSE FAILED:", err);
+    return [];
+  }
+
   if (!Array.isArray(data)) {
+    console.warn("Unexpected response format:", data);
     return [];
   }
 
