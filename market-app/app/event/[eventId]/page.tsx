@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
@@ -37,6 +37,34 @@ const toPercent = (value: number | null): string => {
   return `${Math.round(value * 100)}%`;
 };
 
+type PriceTrend = {
+  direction: "up" | "down";
+  pulseId: number;
+};
+
+const getEffectiveOutcomePrice = (
+  marketIndex: number,
+  outcomeIndex: number,
+  outcomePrice: number | null,
+  liveEventPrice: number | null,
+): number | null => {
+  const isPrimaryMarket = marketIndex === 0;
+  const isFirstOutcome = outcomeIndex === 0;
+  const isSecondOutcome = outcomeIndex === 1;
+
+  if (isPrimaryMarket && liveEventPrice !== null) {
+    if (isFirstOutcome) {
+      return liveEventPrice;
+    }
+
+    if (isSecondOutcome) {
+      return clampProbability(1 - liveEventPrice);
+    }
+  }
+
+  return clampProbability(outcomePrice);
+};
+
 export default function EventDetailPage() {
   const params = useParams<{ eventId: string }>();
   const eventId = typeof params.eventId === "string" ? params.eventId : "";
@@ -47,6 +75,9 @@ export default function EventDetailPage() {
   const errorMessage = useAtomValue(eventsErrorAtom);
   const loadEvents = useSetAtom(loadEventsAtom);
   const tickEventPrices = useSetAtom(tickEventPricesAtom);
+  const previousOutcomePricesRef = useRef<Record<string, number>>({});
+  const pulseCounterRef = useRef(0);
+  const [priceTrends, setPriceTrends] = useState<Record<string, PriceTrend>>({});
 
   useEffect(() => {
     if (!event) {
@@ -63,6 +94,60 @@ export default function EventDetailPage() {
       window.clearInterval(timer);
     };
   }, [tickEventPrices]);
+
+  useEffect(() => {
+    if (!event) {
+      return;
+    }
+
+    const nextOutcomePrices: Record<string, number> = {};
+    const trendUpdates: Record<string, PriceTrend> = {};
+
+    for (let marketIndex = 0; marketIndex < event.markets.length; marketIndex += 1) {
+      const market = event.markets[marketIndex];
+      for (let outcomeIndex = 0; outcomeIndex < market.outcomes.length; outcomeIndex += 1) {
+        const outcome = market.outcomes[outcomeIndex];
+        const outcomeKey = `${market.id}-${outcome.label}`;
+        const effectivePrice = getEffectiveOutcomePrice(
+          marketIndex,
+          outcomeIndex,
+          outcome.price,
+          liveEventPrice,
+        );
+
+        const previousPrice = previousOutcomePricesRef.current[outcomeKey];
+        if (
+          effectivePrice !== null &&
+          previousPrice !== undefined &&
+          previousPrice !== effectivePrice
+        ) {
+          pulseCounterRef.current += 1;
+          trendUpdates[outcomeKey] = {
+            direction: effectivePrice > previousPrice ? "up" : "down",
+            pulseId: pulseCounterRef.current,
+          };
+        }
+
+        if (effectivePrice !== null) {
+          nextOutcomePrices[outcomeKey] = effectivePrice;
+        }
+      }
+    }
+
+    previousOutcomePricesRef.current = nextOutcomePrices;
+
+    if (Object.keys(trendUpdates).length === 0) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setPriceTrends((previous) => ({ ...previous, ...trendUpdates }));
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [event, liveEventPrice]);
 
   if (isLoading && !event) {
     return <div className="p-6 text-slate-200">Loading event...</div>;
@@ -105,33 +190,43 @@ export default function EventDetailPage() {
               <h2 className="text-lg font-semibold text-slate-100">{market.question}</h2>
               <div className="mt-4 space-y-3">
                 {market.outcomes.map((outcome, outcomeIndex) => {
-                  const isPrimaryMarket = marketIndex === 0;
-                  const isFirstOutcome = outcomeIndex === 0;
-                  const isSecondOutcome = outcomeIndex === 1;
-
-                  let effectivePrice = clampProbability(outcome.price);
-
-                  if (isPrimaryMarket && liveEventPrice !== null) {
-                    if (isFirstOutcome) {
-                      effectivePrice = liveEventPrice;
-                    } else if (isSecondOutcome) {
-                      effectivePrice = clampProbability(1 - liveEventPrice);
-                    }
-                  }
-
+                  const effectivePrice = getEffectiveOutcomePrice(
+                    marketIndex,
+                    outcomeIndex,
+                    outcome.price,
+                    liveEventPrice,
+                  );
+                  const outcomeKey = `${market.id}-${outcome.label}`;
+                  const trend = priceTrends[outcomeKey];
                   const width = effectivePrice !== null ? `${Math.round(effectivePrice * 100)}%` : "0%";
 
                   return (
-                    <div key={`${market.id}-${outcome.label}`} className="rounded-lg border border-slate-800 p-3">
+                    <div key={outcomeKey} className="rounded-lg border border-slate-800 p-3">
                       <div className="mb-2 flex items-center justify-between text-sm">
                         <span className="font-medium text-slate-200">{outcome.label}</span>
-                        <span className="text-cyan-200">
+                        <span
+                          key={`value-${outcomeKey}-${trend?.pulseId ?? 0}`}
+                          className={`rounded px-1 py-0.5 ${
+                            trend?.direction === "up"
+                              ? "price-flash-up text-emerald-100"
+                              : trend?.direction === "down"
+                                ? "price-flash-down text-rose-100"
+                                : "text-cyan-200"
+                          }`}
+                        >
                           {toCents(effectivePrice)} ({toPercent(effectivePrice)})
                         </span>
                       </div>
                       <div className="h-2 rounded-full bg-slate-800">
                         <div
-                          className="h-2 rounded-full bg-cyan-400 transition-all duration-500"
+                          key={`bar-${outcomeKey}-${trend?.pulseId ?? 0}`}
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            trend?.direction === "up"
+                              ? "bar-flash-up bg-emerald-400"
+                              : trend?.direction === "down"
+                                ? "bar-flash-down bg-rose-400"
+                                : "bg-cyan-400"
+                          }`}
                           style={{ width }}
                         />
                       </div>
