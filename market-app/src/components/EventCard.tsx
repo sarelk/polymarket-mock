@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { eventPriceAtomFamily } from "@/store/index";
 
@@ -6,6 +6,8 @@ type EventCardProps = {
   eventId: string;
   title: string;
   volume: number | null;
+  marketQuestion: string | null;
+  outcomeLabels: string[];
 };
 
 const formatVolume = (value: number | null): string => {
@@ -21,15 +23,61 @@ const formatVolume = (value: number | null): string => {
   }).format(value);
 };
 
-function EventCardComponent({ eventId, title, volume }: EventCardProps) {
+function EventCardComponent({
+  eventId,
+  title,
+  volume,
+  marketQuestion,
+  outcomeLabels,
+}: EventCardProps) {
   const price = useAtomValue(eventPriceAtomFamily(eventId));
   const priceInCents = price !== null ? Math.round(price * 100) : null;
   const impliedProbability = priceInCents !== null ? `${priceInCents}%` : "N/A";
+  const [priceTrend, setPriceTrend] = useState<"up" | "down" | null>(null);
+  const previousPriceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (price === null) {
+      return;
+    }
+
+    const previousPrice = previousPriceRef.current;
+    if (previousPrice !== null) {
+      if (price > previousPrice) {
+        setPriceTrend("up");
+      } else if (price < previousPrice) {
+        setPriceTrend("down");
+      }
+    }
+
+    previousPriceRef.current = price;
+
+    const timeout = window.setTimeout(() => {
+      setPriceTrend(null);
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [price]);
 
   return (
     <article className="rounded-2xl border border-white/10 bg-[#0f172a] p-4 shadow-[0_10px_24px_rgba(2,6,23,0.45)] transition-colors hover:bg-[#111d36]">
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Event</p>
       <h2 className="mt-2 text-base font-semibold leading-snug text-slate-100">{title}</h2>
+      <p className="mt-2 line-clamp-2 min-h-10 text-sm text-slate-400">
+        {marketQuestion ?? "Market preview coming soon"}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {outcomeLabels.slice(0, 2).map((label) => (
+          <span
+            key={label}
+            className="rounded-full border border-slate-700 bg-slate-900/70 px-2 py-1 text-xs font-medium text-slate-300"
+          >
+            {label}
+          </span>
+        ))}
+      </div>
       <div className="mt-4 flex items-center justify-between">
         <span className="text-sm text-slate-400">Volume</span>
         <span className="rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-sm font-semibold text-emerald-300">
@@ -53,10 +101,28 @@ function EventCardComponent({ eventId, title, volume }: EventCardProps) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full border border-cyan-400/35 bg-cyan-500/10 px-3 py-1 text-sm font-semibold text-cyan-200">
+          <span
+            className={`rounded-full border px-3 py-1 text-sm font-semibold transition-colors ${
+              priceTrend === "up"
+                ? "border-emerald-300/60 bg-emerald-500/20 text-emerald-100"
+                : priceTrend === "down"
+                  ? "border-rose-300/60 bg-rose-500/20 text-rose-100"
+                  : "border-cyan-400/35 bg-cyan-500/10 text-cyan-200"
+            }`}
+          >
             {priceInCents !== null ? `${priceInCents}c` : "N/A"}
           </span>
-          <span className="text-sm text-slate-300">({impliedProbability})</span>
+          <span
+            className={`text-sm ${
+              priceTrend === "up"
+                ? "text-emerald-300"
+                : priceTrend === "down"
+                  ? "text-rose-300"
+                  : "text-slate-300"
+            }`}
+          >
+            ({impliedProbability})
+          </span>
         </div>
       </div>
     </article>

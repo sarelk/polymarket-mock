@@ -61,6 +61,8 @@ export default function Home() {
               eventId={event.id}
               title={event.title}
               volume={event.volume}
+              marketQuestion={event.markets[0]?.question ?? null}
+              outcomeLabels={event.markets[0]?.outcomes.map((outcome) => outcome.label) ?? []}
             />
           ))}
         </div>
