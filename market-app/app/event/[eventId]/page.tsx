@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAtomValue, useSetAtom } from "jotai";
+import { EventImage } from "@/components/EventImage";
 import {
   eventByIdAtomFamily,
   eventPriceAtomFamily,
@@ -174,7 +175,15 @@ export default function EventDetailPage() {
         <Link href="/" className="text-sm text-cyan-300 hover:text-cyan-200">
           Back to events
         </Link>
-        <h1 className="mt-4 text-3xl font-semibold">{event.title}</h1>
+        <div className="mt-4 flex items-start gap-4">
+          <EventImage
+            src={event.image}
+            alt={event.title}
+            size={72}
+            className="shrink-0 rounded-xl object-cover"
+          />
+          <h1 className="text-3xl font-semibold">{event.title}</h1>
+        </div>
         <p className="mt-3 text-sm text-slate-400">
           Live event price:{" "}
           <span className="font-semibold text-cyan-200">{toCents(liveEventPrice)}</span> (

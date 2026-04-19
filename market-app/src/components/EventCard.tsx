@@ -2,10 +2,12 @@ import { memo, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { eventPriceAtomFamily } from "@/store/index";
+import { EventImage } from "./EventImage";
 
 type EventCardProps = {
   eventId: string;
   title: string;
+  imageUrl: string | null;
   volume: number | null;
   marketQuestion: string | null;
   outcomeLabels: string[];
@@ -27,6 +29,7 @@ const formatVolume = (value: number | null): string => {
 function EventCardComponent({
   eventId,
   title,
+  imageUrl,
   volume,
   marketQuestion,
   outcomeLabels,
@@ -65,7 +68,10 @@ function EventCardComponent({
   return (
     <article className="rounded-2xl border border-white/10 bg-[#0f172a] p-4 shadow-[0_10px_24px_rgba(2,6,23,0.45)] transition-colors hover:bg-[#111d36]">
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">Event</p>
-      <h2 className="mt-2 text-base font-semibold leading-snug text-slate-100">{title}</h2>
+      <div className="mt-2 flex items-start gap-3">
+        <EventImage src={imageUrl} alt={title} size={48} className="shrink-0 rounded-lg object-cover" />
+        <h2 className="text-base font-semibold leading-snug text-slate-100">{title}</h2>
+      </div>
       <p className="mt-2 line-clamp-2 min-h-10 text-sm text-slate-400">
         {marketQuestion ?? "Market preview coming soon"}
       </p>
