@@ -54,6 +54,12 @@ export default function Home() {
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
         />
+        {events.length === 0 ? (
+          <div className="rounded-xl border border-slate-800 bg-[#0b1328] p-6 text-sm text-slate-300">
+            No events found for{" "}
+            <span className="font-semibold text-slate-100 capitalize">{selectedCategory}</span>.
+          </div>
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
             <EventCard

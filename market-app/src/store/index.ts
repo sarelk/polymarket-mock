@@ -27,16 +27,24 @@ const clampPrice = (value: number): number => {
 
 const normalize = (value: string | null | undefined): string => (value ?? "").toLowerCase();
 
+const includesCategory = (value: string | null | undefined, category: EventCategory): boolean => {
+  return normalize(value).includes(category);
+};
+
 const matchesCategory = (event: EventModel, category: EventCategory): boolean => {
   if (category === "all") {
     return true;
   }
 
-  if (normalize(event.category).includes(category)) {
-    return true;
-  }
+  const categoryMetadata = [
+    event.category,
+    event.slug,
+    ...event.tags.map((tag) => tag.label),
+    ...event.tags.map((tag) => tag.slug),
+    ...event.markets.map((market) => market.slug),
+  ];
 
-  return event.tags.some((tag) => normalize(tag.label).includes(category));
+  return categoryMetadata.some((value) => includesCategory(value, category));
 };
 
 export const filteredEventsAtom = atom((get) => {
@@ -57,7 +65,7 @@ export const loadEventsAtom = atom(null, async (_get, set) => {
   set(eventsErrorAtom, null);
 
   try {
-    const data = await getEvents({ limit: 20, active: true });
+    const data = await getEvents({ limit: 200, active: true });
     set(eventsAtom, data);
     set(
       eventPricesAtom,
