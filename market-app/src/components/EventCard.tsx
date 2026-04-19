@@ -10,7 +10,8 @@ type EventCardProps = {
   imageUrl: string | null;
   volume: number | null;
   marketQuestion: string | null;
-  outcomeLabels: string[];
+  firstOutcomeLabel: string | null;
+  secondOutcomeLabel: string | null;
 };
 
 const formatVolume = (value: number | null): string => {
@@ -32,7 +33,8 @@ function EventCardComponent({
   imageUrl,
   volume,
   marketQuestion,
-  outcomeLabels,
+  firstOutcomeLabel,
+  secondOutcomeLabel,
 }: EventCardProps) {
   const price = useAtomValue(eventPriceAtomFamily(eventId));
   const priceInCents = price !== null ? Math.round(price * 100) : null;
@@ -76,14 +78,16 @@ function EventCardComponent({
         {marketQuestion ?? "Market preview coming soon"}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        {outcomeLabels.slice(0, 2).map((label) => (
-          <span
-            key={label}
-            className="rounded-full border border-slate-700 bg-slate-900/70 px-2 py-1 text-xs font-medium text-slate-300"
-          >
-            {label}
+        {firstOutcomeLabel ? (
+          <span className="rounded-full border border-slate-700 bg-slate-900/70 px-2 py-1 text-xs font-medium text-slate-300">
+            {firstOutcomeLabel}
           </span>
-        ))}
+        ) : null}
+        {secondOutcomeLabel ? (
+          <span className="rounded-full border border-slate-700 bg-slate-900/70 px-2 py-1 text-xs font-medium text-slate-300">
+            {secondOutcomeLabel}
+          </span>
+        ) : null}
       </div>
       <div className="mt-4 flex items-center justify-between">
         <span className="text-sm text-slate-400">Volume</span>

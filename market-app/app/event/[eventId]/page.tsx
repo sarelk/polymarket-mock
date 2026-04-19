@@ -5,11 +5,15 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAtomValue, useSetAtom } from "jotai";
 import { EventImage } from "@/components/EventImage";
+import { LiveStatus } from "@/components/LiveStatus";
 import {
+  EVENTS_CACHE_TTL_MS,
   eventByIdAtomFamily,
   eventPriceAtomFamily,
   eventsErrorAtom,
   isLoadingEventsAtom,
+  isRefreshingEventsAtom,
+  lastEventsFetchedAtAtom,
   loadEventsAtom,
   tickEventPricesAtom,
 } from "@/store/index";
@@ -73,7 +77,9 @@ export default function EventDetailPage() {
   const event = useAtomValue(eventByIdAtomFamily(eventId));
   const liveEventPrice = useAtomValue(eventPriceAtomFamily(eventId));
   const isLoading = useAtomValue(isLoadingEventsAtom);
+  const isRefreshing = useAtomValue(isRefreshingEventsAtom);
   const errorMessage = useAtomValue(eventsErrorAtom);
+  const lastFetchedAt = useAtomValue(lastEventsFetchedAtAtom);
   const loadEvents = useSetAtom(loadEventsAtom);
   const tickEventPrices = useSetAtom(tickEventPricesAtom);
   const previousOutcomePricesRef = useRef<Record<string, number>>({});
@@ -81,10 +87,18 @@ export default function EventDetailPage() {
   const [priceTrends, setPriceTrends] = useState<Record<string, PriceTrend>>({});
 
   useEffect(() => {
-    if (!event) {
-      loadEvents();
-    }
-  }, [event, loadEvents]);
+    loadEvents();
+  }, [loadEvents]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      loadEvents({ force: true });
+    }, EVENTS_CACHE_TTL_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [loadEvents]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -172,6 +186,7 @@ export default function EventDetailPage() {
   return (
     <div className="min-h-screen bg-[#020617] p-6 text-slate-100">
       <div className="mx-auto max-w-4xl">
+        <LiveStatus isRefreshing={isRefreshing} lastFetchedAt={lastFetchedAt} />
         <Link href="/" className="text-sm text-cyan-300 hover:text-cyan-200">
           Back to events
         </Link>

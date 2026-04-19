@@ -4,11 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { CategoryNav } from "@/components/CategoryNav";
 import { EventCard } from "@/components/EventCard";
+import { LiveStatus } from "@/components/LiveStatus";
 import {
+  EVENTS_CACHE_TTL_MS,
   dynamicEventCategoriesAtom,
   filteredEventsAtom,
   eventsErrorAtom,
   isLoadingEventsAtom,
+  isRefreshingEventsAtom,
+  lastEventsFetchedAtAtom,
   loadEventsAtom,
   selectedCategoryAtom,
   tickEventPricesAtom,
@@ -56,7 +60,9 @@ export default function Home() {
   const filteredEvents = useAtomValue(filteredEventsAtom);
   const categories = useAtomValue(dynamicEventCategoriesAtom);
   const isLoading = useAtomValue(isLoadingEventsAtom);
+  const isRefreshing = useAtomValue(isRefreshingEventsAtom);
   const errorMessage = useAtomValue(eventsErrorAtom);
+  const lastFetchedAt = useAtomValue(lastEventsFetchedAtAtom);
   const selectedCategory = useAtomValue(selectedCategoryAtom);
   const loadEvents = useSetAtom(loadEventsAtom);
   const setSelectedCategory = useSetAtom(selectedCategoryAtom);
@@ -91,6 +97,16 @@ export default function Home() {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
+      loadEvents({ force: true });
+    }, EVENTS_CACHE_TTL_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [loadEvents]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
       tickEventPrices();
     }, 1200);
 
@@ -110,6 +126,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#020617] p-6">
       <div className="mx-auto max-w-5xl">
+        <LiveStatus isRefreshing={isRefreshing} lastFetchedAt={lastFetchedAt} />
         <h1 className="mb-6 text-2xl font-semibold text-slate-100">Trending Events</h1>
         <CategoryNav
           categories={categories}
@@ -131,7 +148,8 @@ export default function Home() {
               imageUrl={event.image}
               volume={event.volume}
               marketQuestion={event.markets[0]?.question ?? null}
-              outcomeLabels={event.markets[0]?.outcomes.map((outcome) => outcome.label) ?? []}
+              firstOutcomeLabel={event.markets[0]?.outcomes[0]?.label ?? null}
+              secondOutcomeLabel={event.markets[0]?.outcomes[1]?.label ?? null}
             />
           ))}
         </div>

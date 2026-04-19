@@ -8,9 +8,12 @@ export type EventCategory = string;
 
 export const eventsAtom = atom<EventModel[]>([]);
 export const isLoadingEventsAtom = atom<boolean>(true);
+export const isRefreshingEventsAtom = atom<boolean>(false);
 export const eventsErrorAtom = atom<string | null>(null);
 export const eventPricesAtom = atom<Record<string, number>>({});
 export const selectedCategoryAtom = atom<EventCategory>("all");
+export const lastEventsFetchedAtAtom = atom<number | null>(null);
+export const EVENTS_CACHE_TTL_MS = 30_000;
 
 const toInitialPrice = (event: EventModel): number => {
   const fromMarket = event.markets[0]?.outcomes[0]?.price;
@@ -106,21 +109,48 @@ export const eventByIdAtomFamily = atomFamily((eventId: string) =>
   atom((get) => get(eventsAtom).find((event) => event.id === eventId) ?? null),
 );
 
-export const loadEventsAtom = atom(null, async (_get, set) => {
-  set(isLoadingEventsAtom, true);
+type LoadEventsOptions = {
+  force?: boolean;
+};
+
+export const loadEventsAtom = atom(null, async (get, set, options: LoadEventsOptions = {}) => {
+  const now = Date.now();
+  const currentEvents = get(eventsAtom);
+  const currentPrices = get(eventPricesAtom);
+  const lastFetchedAt = get(lastEventsFetchedAtAtom);
+  const hasData = currentEvents.length > 0;
+  const isFresh =
+    lastFetchedAt !== null && now - lastFetchedAt < EVENTS_CACHE_TTL_MS;
+
+  if (hasData && isFresh && !options.force) {
+    return;
+  }
+
+  if (hasData) {
+    set(isRefreshingEventsAtom, true);
+  } else {
+    set(isLoadingEventsAtom, true);
+  }
   set(eventsErrorAtom, null);
 
   try {
     const data = await getEvents({ limit: 200, active: true });
     set(eventsAtom, data);
+    set(lastEventsFetchedAtAtom, Date.now());
     set(
       eventPricesAtom,
-      Object.fromEntries(data.map((event) => [event.id, toInitialPrice(event)])),
+      Object.fromEntries(
+        data.map((event) => [event.id, currentPrices[event.id] ?? toInitialPrice(event)]),
+      ),
     );
   } catch (error) {
     set(eventsErrorAtom, error instanceof Error ? error.message : "Failed to load events");
   } finally {
-    set(isLoadingEventsAtom, false);
+    if (hasData) {
+      set(isRefreshingEventsAtom, false);
+    } else {
+      set(isLoadingEventsAtom, false);
+    }
   }
 });
 
