@@ -4,7 +4,7 @@ import { getEvents } from "@/services/polymarket";
 import type { EventModel } from "@/types/event";
 
 export const EVENT_CATEGORIES = ["all", "crypto", "sports", "politics"] as const;
-export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+export type EventCategory = string;
 
 export const eventsAtom = atom<EventModel[]>([]);
 export const isLoadingEventsAtom = atom<boolean>(true);
@@ -31,6 +31,20 @@ const includesCategory = (value: string | null | undefined, category: EventCateg
   return normalize(value).includes(category);
 };
 
+const toCategoryKey = (value: string | null | undefined): string => {
+  const normalized = normalize(value).trim();
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+};
+
 const matchesCategory = (event: EventModel, category: EventCategory): boolean => {
   if (category === "all") {
     return true;
@@ -51,6 +65,38 @@ export const filteredEventsAtom = atom((get) => {
   const events = get(eventsAtom);
   const selectedCategory = get(selectedCategoryAtom);
   return events.filter((event) => matchesCategory(event, selectedCategory));
+});
+
+export const dynamicEventCategoriesAtom = atom((get) => {
+  const events = get(eventsAtom);
+  const counts = new Map<string, number>();
+
+  for (const event of events) {
+    const discoveredCategories = new Set<string>();
+
+    discoveredCategories.add(toCategoryKey(event.category));
+    for (const tag of event.tags) {
+      discoveredCategories.add(toCategoryKey(tag.slug));
+      discoveredCategories.add(toCategoryKey(tag.label));
+    }
+
+    for (const category of discoveredCategories) {
+      if (!category || category === "all") {
+        continue;
+      }
+
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+  }
+
+  const coreSet = new Set<string>(EVENT_CATEGORIES);
+  const dynamicCategories = Array.from(counts.entries())
+    .filter(([category, count]) => !coreSet.has(category) && count >= 3)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([category]) => category);
+
+  return [...EVENT_CATEGORIES, ...dynamicCategories];
 });
 
 export const eventPriceAtomFamily = atomFamily((eventId: string) =>

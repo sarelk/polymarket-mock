@@ -11,7 +11,11 @@ const toLabel = (category: EventCategory): string => {
     return "All";
   }
 
-  return `${category.charAt(0).toUpperCase()}${category.slice(1)}`;
+  return category
+    .split("-")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 };
 
 export function CategoryNav({
