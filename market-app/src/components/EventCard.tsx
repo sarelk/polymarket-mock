@@ -93,17 +93,17 @@ function EventCardComponent({
       </div>
       <div className="mt-2 flex items-center justify-between">
         <div className="flex items-center gap-1 text-sm text-slate-400">
-          <span>Price</span>
+          <span>Yes price</span>
           <span className="group relative inline-flex">
             <button
               type="button"
               className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-slate-500/60 text-[10px] text-slate-300"
-              aria-label="Price help"
+              aria-label="Yes price help"
             >
               ?
             </button>
             <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-48 -translate-x-1/2 rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-center text-xs text-slate-100 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-              Price in cents equals implied probability percentage.
+              1c means $0.01 per share and roughly a 1% implied chance.
             </span>
           </span>
         </div>
@@ -128,7 +128,7 @@ function EventCardComponent({
                   : "text-slate-300"
             }`}
           >
-            ({impliedProbability})
+            ({impliedProbability} chance)
           </span>
         </div>
       </div>
